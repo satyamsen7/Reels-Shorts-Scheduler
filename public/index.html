@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Reels Scheduler — Multi-Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0b0c10;--surface:#13151c;--card:#1a1d28;--border:#252836;
+  --ig:#e1306c;--fb:#1877f2;--yt:#ff0000;--accent:#7c5cfc;
+  --green:#22d3a3;--yellow:#f5c842;--muted:#5a5f78;
+  --text:#e8eaf0;--text2:#9599b3;
+  --font-head:'Syne',sans-serif;--font-mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-head);min-height:100vh;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* LAYOUT */
+.app{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;}
+.logo{padding:0 20px 24px;border-bottom:1px solid var(--border);}
+.logo h1{font-size:17px;font-weight:800;letter-spacing:-.5px;}
+.logo span{display:block;font-size:10px;font-family:var(--font-mono);color:var(--muted);margin-top:3px;letter-spacing:1px;}
+nav{flex:1;padding:16px 12px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);transition:all .15s;margin-bottom:2px;}
+.nav-item:hover{background:var(--card);color:var(--text);}
+.nav-item.active{background:var(--accent)22;color:var(--accent);}
+.nav-item .icon{font-size:16px;width:20px;text-align:center;}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.topbar h2{font-size:16px;font-weight:700;}
+.topbar-actions{display:flex;gap:10px;align-items:center;}
+.content{padding:24px 28px;flex:1;}
+.view{display:none;}.view.active{display:block;}
+
+/* STAT CARDS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;}
+.stat-card .label{font-size:11px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+.stat-card .value{font-size:28px;font-weight:800;line-height:1;}
+.stat-card .sub{font-size:11px;color:var(--text2);margin-top:6px;font-family:var(--font-mono);}
+.stat-card.green .value{color:var(--green);}
+.stat-card.yellow .value{color:var(--yellow);}
+.stat-card.accent .value{color:var(--accent);}
+
+/* PIPELINE */
+.pipeline-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;}
+.section-title{font-size:12px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}
+.pipeline{display:flex;align-items:center;overflow-x:auto;padding-bottom:4px;}
+.pipe-step{display:flex;align-items:center;flex-shrink:0;}
+.pipe-node{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap;transition:all .15s;min-width:110px;text-align:center;}
+.pipe-node.active{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}
+.pipe-node .node-type{font-size:9px;font-family:var(--font-mono);color:var(--muted);display:block;margin-top:2px;}
+.pipe-arrow{color:var(--muted);padding:0 6px;font-size:12px;}
+.pipe-branch{display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
+.pipe-branch-item{display:flex;align-items:center;}
+.branch-label{font-size:9px;font-family:var(--font-mono);padding:3px 7px;border-radius:4px;font-weight:500;white-space:nowrap;margin-right:4px;}
+.branch-label.ig{background:var(--ig)22;color:var(--ig);}
+.branch-label.fb{background:var(--fb)22;color:var(--fb);}
+.branch-label.yt{background:var(--yt)22;color:var(--yt);}
+
+/* TWO-COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+
+/* TABLE */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.table-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+table{width:100%;border-collapse:collapse;}
+thead th{text-align:left;font-size:10px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 20px;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border)88;transition:background .1s;cursor:pointer;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface);}
+td{padding:12px 20px;font-size:13px;}
+td.mono{font-family:var(--font-mono);font-size:12px;color:var(--text2);}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;font-family:var(--font-mono);}
+.badge.scheduled{background:var(--yellow)22;color:var(--yellow);}
+.badge.processing{background:var(--accent)22;color:var(--accent);}
+.badge.processed{background:var(--green)22;color:var(--green);}
+.badge.failed{background:#ff4d4d22;color:#ff6b6b;}
+.p-icons{display:flex;gap:5px;}
+.p-icon{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+.p-icon.ig{background:var(--ig)22;color:var(--ig);}
+.p-icon.fb{background:var(--fb)22;color:var(--fb);}
+.p-icon.yt{background:var(--yt)22;color:var(--yt);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:var(--font-head);transition:all .15s;}
+.btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:#6a4be8;}
+.btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:5px 11px;font-size:11px;}
+.btn-danger{background:#ff4d4d22;color:#ff6b6b;border:1px solid #ff4d4d44;}
+.btn-danger:hover{background:#ff4d4d33;}
+.btn-green{background:var(--green)22;color:var(--green);border:1px solid var(--green)44;}
+.btn-green:hover{background:var(--green)33;}
+
+/* LOG */
+.log-body{padding:14px 20px;height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:11px;line-height:1.8;}
+.log-line{display:flex;gap:12px;}
+.log-time{color:var(--muted);flex-shrink:0;}
+.log-msg{color:var(--text2);}
+.log-msg.ok{color:var(--green);}.log-msg.err{color:#ff6b6b;}.log-msg.info{color:var(--accent);}.log-msg.warn{color:var(--yellow);}
+
+/* FIELD */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.field label{font-size:11px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+.field input,.field textarea,.field select{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--font-mono);outline:none;transition:border .15s;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);}
+.field input[type=password]{letter-spacing:2px;}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* ── NEW POST FORM ── */
+.post-form{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;}
+.post-form h3{font-size:16px;font-weight:800;margin-bottom:22px;}
+
+/* Video drop zone */
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--accent)08;}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.drop-zone .dz-icon{font-size:36px;margin-bottom:10px;}
+.drop-zone .dz-text{font-size:13px;color:var(--text2);}
+.drop-zone .dz-sub{font-size:11px;font-family:var(--font-mono);color:var(--muted);margin-top:4px;}
+.video-preview{width:100%;max-height:280px;border-radius:10px;object-fit:cover;margin-top:10px;display:none;}
+.upload-progress{height:3px;background:var(--border);border-radius:2px;margin-top:12px;overflow:hidden;display:none;}
+.upload-progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:0%;}
+.upload-status{font-size:11px;font-family:var(--font-mono);color:var(--text2);margin-top:6px;min-height:16px;}
+
+/* Platform checkboxes */
+.platform-select{display:flex;gap:10px;margin-bottom:14px;}
+.plat-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;background:var(--surface);font-family:var(--font-head);font-weight:700;font-size:12px;color:var(--text2);}
+.plat-btn:hover{border-color:var(--border);color:var(--text);}
+.plat-btn.selected-ig{border-color:var(--ig);color:var(--ig);background:var(--ig)11;}
+.plat-btn.selected-fb{border-color:var(--fb);color:var(--fb);background:var(--fb)11;}
+.plat-btn.selected-yt{border-color:var(--yt);color:var(--yt);background:var(--yt)11;}
+.plat-btn .plat-icon{font-size:22px;}
+
+/* Post timing */
+.timing-select{display:flex;gap:10px;margin-bottom:14px;}
+.time-btn{flex:1;padding:10px;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:var(--surface);font-family:var(--font-head);font-weight:700;font-size:12px;color:var(--text2);transition:all .15s;text-align:center;}
+.time-btn:hover{color:var(--text);}
+.time-btn.selected{border-color:var(--accent);color:var(--accent);background:var(--accent)11;}
+
+/* CRED CARDS */
+.cred-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;}
+.cred-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.cred-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;}
+.cred-icon.ig{background:var(--ig)22;color:var(--ig);}
+.cred-icon.fb{background:var(--fb)22;color:var(--fb);}
+.cred-icon.yt{background:var(--yt)22;color:var(--yt);}
+.cred-icon.cloud{background:var(--accent)22;color:var(--accent);}
+.cred-body{padding:18px 20px;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:#00000088;backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;width:540px;max-height:85vh;overflow-y:auto;transform:translateY(20px);transition:transform .2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-head h3{font-size:15px;font-weight:700;}
+.modal-body{padding:24px;}
+.modal-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
+
+/* MISC */
+.dot{width:7px;height:7px;border-radius:50%;}
+.dot.ig{background:var(--ig);}.dot.fb{background:var(--fb);}.dot.yt{background:var(--yt);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.pulsing{animation:pulse 1.5s ease infinite;}
+.empty{text-align:center;padding:48px;color:var(--muted);font-family:var(--font-mono);font-size:12px;}
+.chip{font-size:10px;font-family:var(--font-mono);padding:2px 7px;border-radius:4px;background:var(--surface);color:var(--text2);border:1px solid var(--border);}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:8px;padding:12px 16px;font-size:12px;font-family:var(--font-mono);color:var(--text);animation:slideIn .3s ease;min-width:280px;}
+.toast.err{border-left-color:#ff6b6b;}.toast.warn{border-left-color:var(--yellow);}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* RUN INDICATOR */
+#run-indicator{display:none;align-items:center;gap:8px;padding:6px 12px;background:var(--accent)22;border:1px solid var(--accent)44;border-radius:8px;font-size:11px;font-family:var(--font-mono);color:var(--accent);}
+#run-indicator.visible{display:flex;}
+
+/* TRACK CARD */
+.track-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+.track-top{display:flex;align-items:center;justify-content:space-between;}
+.track-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;transition:width .5s ease;}
+.progress-fill.ig{background:var(--ig);}.progress-fill.fb{background:var(--fb);}.progress-fill.yt{background:var(--yt);}
+
+/* SCHEDULER STATUS */
+.sched-status{padding:16px 20px;border-top:1px solid var(--border);}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <h1>Reels Scheduler</h1>
+    <span>Multi-Platform · v2</span>
+  </div>
+  <nav>
+    <div class="nav-item active" data-view="dashboard" onclick="navigate(this,'dashboard')"><span class="icon">◈</span> Dashboard</div>
+    <div class="nav-item" data-view="queue"      onclick="navigate(this,'queue')"><span class="icon">≡</span> Queue</div>
+    <div class="nav-item" data-view="newpost"    onclick="navigate(this,'newpost')"><span class="icon">+</span> New Post</div>
+    <div class="nav-item" data-view="credentials" onclick="navigate(this,'credentials')"><span class="icon">⚿</span> Credentials</div>
+    <div class="nav-item" data-view="logs"       onclick="navigate(this,'logs')"><span class="icon">⊟</span> Run Logs</div>
+  </nav>
+  <div class="sched-status">
+    <div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);margin-bottom:8px;">SCHEDULER</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="sched-dot" class="dot ig pulsing" style="background:var(--green);"></div>
+      <span style="font-size:12px;font-family:var(--font-mono);color:var(--text2);" id="sched-label">Active</span>
+    </div>
+    <div style="font-size:10px;font-family:var(--font-mono);color:var(--muted);margin-top:3px;">checks every 30s</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <h2 id="topbar-title">Dashboard</h2>
+    <div class="topbar-actions">
+      <div id="run-indicator" class="pulsing">⏳ Posting…</div>
+      <button class="btn btn-primary btn-sm" onclick="navigate(document.querySelector('[data-view=newpost]'),'newpost')">+ New Post</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══════ DASHBOARD ══════ -->
+    <div id="view-dashboard" class="view active">
+      <div class="stats">
+        <div class="stat-card"><div class="label">Total Posts</div><div class="value" id="stat-total">0</div><div class="sub">in queue</div></div>
+        <div class="stat-card green"><div class="label">Processed</div><div class="value" id="stat-processed">0</div><div class="sub">successfully posted</div></div>
+        <div class="stat-card yellow"><div class="label">Scheduled</div><div class="value" id="stat-scheduled">0</div><div class="sub">awaiting trigger</div></div>
+        <div class="stat-card accent"><div class="label">Processing</div><div class="value" id="stat-processing">0</div><div class="sub">running now</div></div>
+      </div>
+
+      <!-- Pipeline -->
+      <div class="pipeline-wrap">
+        <div class="section-title">Workflow Pipeline</div>
+        <div class="pipeline">
+          <div class="pipe-step"><div class="pipe-node" id="pipe-upload">⬆ Upload Video<span class="node-type">multipart/form-data</span></div><div class="pipe-arrow">→</div></div>
+          <div class="pipe-step"><div class="pipe-node" id="pipe-cloudinary">☁ Cloudinary<span class="node-type">get public URL</span></div><div class="pipe-arrow">→</div></div>
+          <div style="flex-shrink:0;">
+            <div class="pipe-branch">
+              <div class="pipe-branch-item"><span class="branch-label ig">IG</span><div class="pipe-node" id="pipe-ig" style="min-width:130px;">📸 Create Container<span class="node-type">wait → publish</span></div></div>
+              <div class="pipe-branch-item"><span class="branch-label fb">FB</span><div class="pipe-node" id="pipe-fb" style="min-width:130px;">👍 Post Reel<span class="node-type">/video_reels API</span></div></div>
+              <div class="pipe-branch-item"><span class="branch-label yt">YT</span><div class="pipe-node" id="pipe-yt" style="min-width:130px;">▶ Upload Short<span class="node-type">OAuth2 + resumable</span></div></div>
+            </div>
+          </div>
+          <div class="pipe-arrow" style="margin-left:4px;">→</div>
+          <div class="pipe-step"><div class="pipe-node" id="pipe-done">✅ Done<span class="node-type">all platforms</span></div></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="table-wrap">
+            <div class="table-header"><div class="section-title" style="margin:0">Platform Status</div></div>
+            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
+              <div class="track-card"><div class="track-top"><div class="track-name"><div class="dot ig"></div>Instagram</div><span class="chip">Reels</span></div><div class="progress-bar"><div class="progress-fill ig" id="ig-bar" style="width:0%"></div></div><div style="font-size:10px;font-family:var(--font-mono);color:var(--text2);" id="ig-count">0 reels posted</div></div>
+              <div class="track-card"><div class="track-top"><div class="track-name"><div class="dot fb"></div>Facebook</div><span class="chip">Reels</span></div><div class="progress-bar"><div class="progress-fill fb" id="fb-bar" style="width:0%"></div></div><div style="font-size:10px;font-family:var(--font-mono);color:var(--text2);" id="fb-count">0 reels posted</div></div>
+              <div class="track-card"><div class="track-top"><div class="track-name"><div class="dot yt"></div>YouTube</div><span class="chip">Shorts</span></div><div class="progress-bar"><div class="progress-fill yt" id="yt-bar" style="width:0%"></div></div><div style="font-size:10px;font-family:var(--font-mono);color:var(--text2);" id="yt-count">0 shorts posted</div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="table-wrap" style="height:100%;">
+            <div class="table-header"><div class="section-title" style="margin:0">Recent Activity</div></div>
+            <div class="log-body" id="activity-log"><div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg">Waiting for first run…</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ QUEUE ══════ -->
+    <div id="view-queue" class="view">
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="section-title" style="margin:0">Post Queue</div>
+          <select id="filter-status" onchange="renderQueue()" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:12px;color:var(--text2);font-family:var(--font-mono);outline:none;">
+            <option value="">All Statuses</option>
+            <option value="Scheduled to post">Scheduled</option>
+            <option value="Processing">Processing</option>
+            <option value="Processed">Processed</option>
+            <option value="Failed">Failed</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>ID</th><th>Title</th><th>Platforms</th><th>Status</th><th>Scheduled At</th><th>IG ID</th><th>FB ID</th><th>YT ID</th><th>Actions</th></tr></thead>
+          <tbody id="queue-tbody"><tr><td colspan="9"><div class="empty">No posts yet. Click + New Post to get started.</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════ NEW POST ══════ -->
+    <div id="view-newpost" class="view">
+      <div class="post-form">
+        <h3>✨ Create New Post</h3>
+
+        <!-- 1. Upload video -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">1 — Upload Video</div>
+          <div class="drop-zone" id="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <input type="file" id="video-input" accept="video/*" onchange="onFileSelected(event)"/>
+            <div class="dz-icon">📹</div>
+            <div class="dz-text">Drag & drop your video here, or click to browse</div>
+            <div class="dz-sub">MP4, MOV, AVI · max 500 MB · will be posted as Reel / Short</div>
+          </div>
+          <video id="video-preview" class="video-preview" controls></video>
+          <div class="upload-progress" id="upload-progress"><div class="upload-progress-fill" id="upload-fill"></div></div>
+          <div class="upload-status" id="upload-status"></div>
+        </div>
+
+        <!-- 2. Title + caption -->
+        <div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">2 — Title & Caption</div>
+        <div class="field"><label>Title</label><input type="text" id="f-title" placeholder="My awesome reel"/></div>
+        <div class="field"><label>Caption / Description</label><textarea id="f-caption" rows="3" placeholder="Write your caption here…"></textarea></div>
+        <div class="field" style="margin-bottom:20px;"><label>Tags (comma-separated)</label><input type="text" id="f-tags" placeholder="travel, lifestyle, reels, shorts"/></div>
+
+        <!-- 3. Platform selection -->
+        <div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">3 — Select Platforms</div>
+        <div class="platform-select" style="margin-bottom:20px;">
+          <button class="plat-btn" id="btn-ig" onclick="togglePlatform('instagram','btn-ig','selected-ig')"><span class="plat-icon">📸</span>Instagram</button>
+          <button class="plat-btn" id="btn-fb" onclick="togglePlatform('facebook','btn-fb','selected-fb')"><span class="plat-icon">👍</span>Facebook</button>
+          <button class="plat-btn" id="btn-yt" onclick="togglePlatform('youtube','btn-yt','selected-yt')"><span class="plat-icon">▶</span>YouTube</button>
+        </div>
+
+        <!-- 4. Timing -->
+        <div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">4 — When to Post</div>
+        <div class="timing-select">
+          <button class="time-btn selected" id="tbtn-now" onclick="selectTiming('now')">⚡ Post Now</button>
+          <button class="time-btn" id="tbtn-sched" onclick="selectTiming('scheduled')">🗓 Schedule</button>
+        </div>
+        <div id="sched-dt-wrap" style="display:none;margin-bottom:14px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Scheduled Date & Time</label>
+            <input type="datetime-local" id="f-datetime"/>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div style="display:flex;gap:10px;margin-top:6px;">
+          <button class="btn btn-primary" id="submit-btn" onclick="submitPost()" disabled>Add to Queue</button>
+          <button class="btn btn-outline" onclick="resetForm()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ CREDENTIALS ══════ -->
+    <div id="view-credentials" class="view">
+      <div style="margin-bottom:20px;padding:14px 18px;background:var(--yellow)11;border:1px solid var(--yellow)33;border-radius:10px;font-size:12px;font-family:var(--font-mono);color:var(--yellow);">
+        ⚠ Credentials are saved directly to the .env file on the server. Changes take effect immediately.
+      </div>
+
+      <!-- Instagram -->
+      <div class="cred-card">
+        <div class="cred-header"><div class="cred-icon ig">IG</div><div><div style="font-size:14px;font-weight:700;">Instagram</div><div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);">Graph API v23.0 · REELS</div></div></div>
+        <div class="cred-body"><div class="field-grid">
+          <div class="field"><label>Access Token</label><input type="password" id="cred-ig-token" placeholder="EAAxxxxxxx…"/></div>
+          <div class="field"><label>IG User ID</label><input type="text" id="cred-ig-user" placeholder="17841400000000000"/></div>
+        </div></div>
+      </div>
+
+      <!-- Facebook -->
+      <div class="cred-card">
+        <div class="cred-header"><div class="cred-icon fb">FB</div><div><div style="font-size:14px;font-weight:700;">Facebook</div><div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);">/video_reels · upload_phase: finish</div></div></div>
+        <div class="cred-body"><div class="field-grid">
+          <div class="field"><label>Page ID</label><input type="text" id="cred-fb-page" placeholder="123456789"/></div>
+          <div class="field"><label>Page Access Token</label><input type="password" id="cred-fb-token" placeholder="EAAxxxxxxx…"/></div>
+        </div></div>
+      </div>
+
+      <!-- YouTube -->
+      <div class="cred-card">
+        <div class="cred-header"><div class="cred-icon yt">YT</div><div><div style="font-size:14px;font-weight:700;">YouTube</div><div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);">Data API v3 · Resumable Upload · #Shorts</div></div></div>
+        <div class="cred-body"><div class="field-grid">
+          <div class="field"><label>Client ID</label><input type="text" id="cred-yt-clientid" placeholder="xxxxxxxxx.apps.googleusercontent.com"/></div>
+          <div class="field"><label>Client Secret</label><input type="password" id="cred-yt-secret" placeholder="GOCSPX-xxxxxxx"/></div>
+          <div class="field" style="grid-column:span 2;"><label>Refresh Token</label><input type="password" id="cred-yt-refresh" placeholder="1//xxxxxxx"/></div>
+        </div></div>
+      </div>
+
+      <!-- Cloudinary -->
+      <div class="cred-card">
+        <div class="cred-header"><div class="cred-icon cloud">☁</div><div><div style="font-size:14px;font-weight:700;">Cloudinary</div><div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);">Video hosting for public URLs</div></div></div>
+        <div class="cred-body"><div class="field-grid">
+          <div class="field"><label>Cloud Name</label><input type="text" id="cred-cloud-name" placeholder="my-cloud-name"/></div>
+          <div class="field"><label>Upload Preset (unsigned)</label><input type="text" id="cred-cloud-preset" placeholder="ml_default"/></div>
+          <div class="field"><label>API Key <span style="color:var(--muted);font-weight:400;">(for signed uploads)</span></label><input type="text" id="cred-cloud-api-key" placeholder="814xxxxxxxxxxxxxxx"/></div>
+          <div class="field"><label>API Secret <span style="color:var(--muted);font-weight:400;">(for signed uploads)</span></label><input type="password" id="cred-cloud-secret" placeholder="xxxxxxxxxxxxxxxxxxxxxxxx"/></div>
+        </div></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveCredentials()">💾 Save to .env</button>
+    </div>
+
+    <!-- ══════ LOGS ══════ -->
+    <div id="view-logs" class="view">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="section-title" style="margin:0">Execution Logs</div>
+        <button class="btn btn-outline btn-sm" onclick="clearLogs()">Clear</button>
+      </div>
+      <div class="table-wrap">
+        <div class="log-body" id="full-log" style="height:500px;">
+          <div class="log-line"><span class="log-time">00:00:00</span><span class="log-msg">System initialized.</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+</div><!-- /app -->
+
+<!-- MODAL: Post Detail -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modal-title">Post Details</h3><button class="btn btn-outline btn-sm" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" id="modal-run-btn">▶ Post Now</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<!-- ════════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════ -->
+<script>
+// ── State ────────────────────────────────────────────────
+let queue = [];   // kept in sync with server
+let logs  = JSON.parse(localStorage.getItem('reels-logs') || '[]');
+
+let selectedPlatforms = new Set();
+let postTiming = 'now';  // 'now' | 'scheduled'
+let uploadedVideoUrl  = null;
+let uploadedTempId    = null;
+
+// ── Navigation ───────────────────────────────────────────
+function navigate(el, view) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('view-' + view).classList.add('active');
+  document.getElementById('topbar-title').textContent = el.textContent.trim();
+  if (view === 'queue')        { loadQueueFromServer(); }
+  if (view === 'dashboard')    updateDashboard();
+  if (view === 'credentials')  loadCredentials();
+  if (view === 'logs')         renderFullLog();
+  if (view === 'newpost')      resetForm();
+}
+
+// ── Queue ─────────────────────────────────────────────────
+async function loadQueueFromServer() {
+  try {
+    const resp = await fetch('/api/queue');
+    queue = await resp.json();
+    renderQueue();
+    updateDashboard();
+  } catch(e) { toast('Could not load queue from server', 'err'); }
+}
+
+function hasErrors(p) {
+  return [p.instagramId, p.facebookId, p.youtubeId].some(id => id && id.startsWith('ERR:'));
+}
+
+function errorCount(p) {
+  return [p.instagramId, p.facebookId, p.youtubeId].filter(id => id && id.startsWith('ERR:')).length;
+}
+
+function renderQueue() {
+  const filter   = document.getElementById('filter-status').value;
+  const filtered = filter ? queue.filter(p => p.status === filter) : queue;
+  const tbody    = document.getElementById('queue-tbody');
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="9"><div class="empty">No posts match this filter.</div></td></tr>'; return; }
+  tbody.innerHTML = filtered.map(p => `
+    <tr onclick="openModal('${p.id}')">
+      <td class="mono" style="font-size:11px;">${p.id}</td>
+      <td style="font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.title || '—'}</td>
+      <td><div class="p-icons">${(p.platforms||[]).map(pl => `<div class="p-icon ${pl==='instagram'?'ig':pl==='facebook'?'fb':'yt'}">${pl==='instagram'?'IG':pl==='facebook'?'FB':'YT'}</div>`).join('')}</div></td>
+      <td>${statusBadge(p.status, p)}</td>
+      <td class="mono" style="font-size:11px;">${p.scheduledAt ? new Date(p.scheduledAt).toLocaleString() : '—'}</td>
+      <td class="mono" style="font-size:11px;">${p.instagramId||'—'}</td>
+      <td class="mono" style="font-size:11px;">${p.facebookId||'—'}</td>
+      <td class="mono" style="font-size:11px;">${p.youtubeId||'—'}</td>
+      <td style="white-space:nowrap;">
+        ${p.status==='Scheduled to post'?`<button class="btn btn-green btn-sm" onclick="event.stopPropagation();runNow('${p.id}')">▶ Run</button>`:''}
+        ${p.status==='Failed'||((p.status==='Processed')&&hasErrors(p))?`<button class="btn btn-sm" style="background:var(--yellow)22;color:var(--yellow);border:1px solid var(--yellow)44;" onclick="event.stopPropagation();retryPost('${p.id}')">🔄 Retry</button>`:''}}
+        <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="event.stopPropagation();deletePost('${p.id}')">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+function statusBadge(s, p) {
+  const m = {'Scheduled to post':'scheduled','Processing':'processing','Processed':'processed','Failed':'failed'};
+  let badge = `<span class="badge ${m[s]||'scheduled'}">${s}</span>`;
+  if (s === 'Processed' && p && hasErrors(p)) {
+    badge += ` <span style="font-size:10px;font-family:var(--font-mono);color:#ff6b6b;margin-left:4px;">${errorCount(p)} platform error${errorCount(p)>1?'s':''}</span>`;
+  }
+  return badge;
+}
+
+async function retryPost(id) {
+  try {
+    const resp = await fetch(`/api/queue/${id}/retry`, { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error);
+    toast('🔄 Post reset — running now…');
+    addLog('Retry', `Retrying post ${id}`, 'warn');
+    await loadQueueFromServer();
+    runNow(id);
+  } catch(e) { toast('Retry failed: ' + e.message, 'err'); }
+}
+
+async function deletePost(id) {
+  await fetch(`/api/queue/${id}`, { method:'DELETE' });
+  await loadQueueFromServer();
+  toast('Post removed');
+}
+
+// ── Upload Video ──────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave()  { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onDrop(e)      { e.preventDefault(); onDragLeave(); if (e.dataTransfer.files[0]) uploadVideo(e.dataTransfer.files[0]); }
+function onFileSelected(e) { if (e.target.files[0]) uploadVideo(e.target.files[0]); }
+
+async function uploadVideo(file) {
+  // Show preview
+  const preview = document.getElementById('video-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+
+  const progress = document.getElementById('upload-progress');
+  const fill     = document.getElementById('upload-fill');
+  const status   = document.getElementById('upload-status');
+
+  progress.style.display = 'block';
+  fill.style.width = '10%';
+  status.textContent = 'Uploading to Cloudinary…';
+  document.getElementById('submit-btn').disabled = true;
+  uploadedVideoUrl = null;
+
+  // Animate progress (fake progress while XHR runs)
+  let pct = 10;
+  const ticker = setInterval(() => { pct = Math.min(pct + 3, 88); fill.style.width = pct + '%'; }, 500);
+
+  try {
+    const form = new FormData();
+    form.append('video', file);
+    const resp = await fetch('/api/upload', { method:'POST', body: form });
+    const data = await resp.json();
+
+    clearInterval(ticker);
+    if (!resp.ok) throw new Error(data.error || 'Upload failed');
+
+    fill.style.width = '100%';
+    status.textContent = `✅ Uploaded: ${data.name} (${(data.size/1024/1024).toFixed(1)} MB)`;
+    uploadedVideoUrl = data.url;
+    uploadedTempId   = data.tempId;
+    checkSubmitReady();
+  } catch(err) {
+    clearInterval(ticker);
+    fill.style.background = '#ff6b6b';
+    status.textContent = '❌ ' + err.message;
+    toast('Upload failed: ' + err.message, 'err');
+  }
+}
+
+// ── Platform toggle ───────────────────────────────────────
+function togglePlatform(platform, btnId, cls) {
+  const btn = document.getElementById(btnId);
+  if (selectedPlatforms.has(platform)) {
+    selectedPlatforms.delete(platform);
+    btn.className = 'plat-btn';
+  } else {
+    selectedPlatforms.add(platform);
+    btn.className = `plat-btn ${cls}`;
+  }
+  checkSubmitReady();
+}
+
+function selectTiming(t) {
+  postTiming = t;
+  document.getElementById('tbtn-now').classList.toggle('selected', t === 'now');
+  document.getElementById('tbtn-sched').classList.toggle('selected', t === 'scheduled');
+  document.getElementById('sched-dt-wrap').style.display = t === 'scheduled' ? 'block' : 'none';
+}
+
+function checkSubmitReady() {
+  const ok = uploadedVideoUrl && selectedPlatforms.size > 0;
+  document.getElementById('submit-btn').disabled = !ok;
+}
+
+// ── Submit post ───────────────────────────────────────────
+async function submitPost() {
+  const title     = document.getElementById('f-title').value.trim() || 'My Reel';
+  const caption   = document.getElementById('f-caption').value.trim();
+  const tags      = document.getElementById('f-tags').value.trim();
+  const platforms = [...selectedPlatforms];
+  const dtVal     = document.getElementById('f-datetime').value;
+
+  if (!uploadedVideoUrl)    { toast('Please upload a video first', 'err'); return; }
+  if (!platforms.length)    { toast('Select at least one platform', 'err'); return; }
+  if (postTiming === 'scheduled' && !dtVal) { toast('Please pick a date & time', 'err'); return; }
+
+  const id = 'EX-' + Date.now().toString(36).toUpperCase();
+  const post = {
+    id, title, caption, tags,
+    videoUrl:    uploadedVideoUrl,
+    platforms,
+    status:      'Scheduled to post',
+    scheduledAt: postTiming === 'scheduled' ? new Date(dtVal).toISOString() : null,
+    instagramId: '', facebookId: '', youtubeId: '',
+    createdAt:   new Date().toISOString(),
+  };
+
+  // Save to server
+  await fetch('/api/queue', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(post) });
+
+  // Bind cached buffer to real post id
+  if (uploadedTempId) {
+    await fetch('/api/queue/bind-buffer', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ tempId: uploadedTempId, postId: id }) });
+  }
+
+  addLog('Queue', `Post added: "${title}" → ${platforms.join(', ')}`, 'info');
+  toast('✅ Added to queue: ' + title);
+  resetForm();
+  await loadQueueFromServer();
+
+  // If post now → run immediately
+  if (postTiming === 'now') {
+    navigate(document.querySelector('[data-view=queue]'), 'queue');
+    runNow(id);
+  } else {
+    navigate(document.querySelector('[data-view=queue]'), 'queue');
+    toast(`🗓 Scheduled for ${new Date(dtVal).toLocaleString()}`, 'ok');
+  }
+}
+
+function resetForm() {
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-caption').value = '';
+  document.getElementById('f-tags').value = '';
+  document.getElementById('f-datetime').value = '';
+  document.getElementById('video-preview').style.display = 'none';
+  document.getElementById('video-preview').src = '';
+  document.getElementById('upload-progress').style.display = 'none';
+  document.getElementById('upload-fill').style.width = '0%';
+  document.getElementById('upload-fill').style.background = 'var(--accent)';
+  document.getElementById('upload-status').textContent = '';
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  document.getElementById('video-input').value = '';
+  selectedPlatforms.clear();
+  ['btn-ig','btn-fb','btn-yt'].forEach(id => document.getElementById(id).className = 'plat-btn');
+  postTiming = 'now';
+  selectTiming('now');
+  uploadedVideoUrl = null;
+  uploadedTempId   = null;
+  document.getElementById('submit-btn').disabled = true;
+}
+
+// ── Run now (POST /api/run with SSE) ─────────────────────
+async function runNow(postId) {
+  const post = queue.find(p => p.id === postId);
+  if (!post) return;
+  if (post.status === 'Processing') { toast('Already running', 'warn'); return; }
+
+  document.getElementById('run-indicator').classList.add('visible');
+  const sessionId = 'sess-' + Date.now();
+
+  // Connect SSE
+  const evtSource = new EventSource(`/api/logs/stream/${sessionId}`);
+  evtSource.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    addLog(d.node, d.msg, d.type);
+
+    const pipeMap = {Cloudinary:'pipe-cloudinary',Instagram:'pipe-ig',Facebook:'pipe-fb',YouTube:'pipe-yt',Done:'pipe-done'};
+    clearPipeHighlights();
+    if (pipeMap[d.node]) document.getElementById(pipeMap[d.node])?.classList.add('active');
+
+    if (d.type === 'done') {
+      evtSource.close();
+      const r = JSON.parse(d.msg);
+      post.instagramId = r.igId; post.facebookId = r.fbId; post.youtubeId = r.ytId;
+      post.status = 'Processed';
+      finishRun();
+      toast('✅ Posted to all selected platforms!');
+    }
+    if (d.type === 'fatal') {
+      evtSource.close();
+      post.status = 'Failed';
+      finishRun();
+      toast('❌ Failed: ' + d.msg, 'err');
+    }
+  };
+  evtSource.onerror = () => { evtSource.close(); finishRun(); toast('Lost connection to server', 'err'); };
+
+  function finishRun() {
+    document.getElementById('run-indicator').classList.remove('visible');
+    clearPipeHighlights();
+    loadQueueFromServer();
+    updateDashboard();
+    closeModal();
+  }
+
+  // Fire
+  addLog('Trigger', `Starting post "${post.title}" → ${(post.platforms||[]).join(', ')}`, 'info');
+  document.getElementById('pipe-cloudinary')?.classList.add('active');
+
+  try {
+    const resp = await fetch('/api/run', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ postId, sessionId }),
+    });
+    if (!resp.ok) { const err = await resp.json(); throw new Error(err.error); }
+  } catch(err) {
+    evtSource.close(); finishRun();
+    toast('❌ Server error: ' + err.message, 'err');
+  }
+}
+
+// ── Pipeline ──────────────────────────────────────────────
+function clearPipeHighlights() { document.querySelectorAll('.pipe-node').forEach(n => n.classList.remove('active')); }
+
+// ── Dashboard ─────────────────────────────────────────────
+function updateDashboard() {
+  const total      = queue.length;
+  const processed  = queue.filter(p => p.status === 'Processed').length;
+  const scheduled  = queue.filter(p => p.status === 'Scheduled to post').length;
+  const processing = queue.filter(p => p.status === 'Processing').length;
+
+  document.getElementById('stat-total').textContent      = total;
+  document.getElementById('stat-processed').textContent  = processed;
+  document.getElementById('stat-scheduled').textContent  = scheduled;
+  document.getElementById('stat-processing').textContent = processing;
+
+  const mx = Math.max(processed, 1);
+  document.getElementById('ig-bar').style.width = (processed/mx*100)+'%';
+  document.getElementById('fb-bar').style.width = (processed/mx*100)+'%';
+  document.getElementById('yt-bar').style.width = (processed/mx*100)+'%';
+  document.getElementById('ig-count').textContent = processed + ' reels posted';
+  document.getElementById('fb-count').textContent = processed + ' reels posted';
+  document.getElementById('yt-count').textContent = processed + ' shorts posted';
+}
+
+// ── Logs ──────────────────────────────────────────────────
+function addLog(node, msg, type = '') {
+  const now = new Date().toLocaleTimeString('en-US',{hour12:false});
+  logs.push({ time:now, node, msg, type });
+  if (logs.length > 500) logs = logs.slice(-500);
+  localStorage.setItem('reels-logs', JSON.stringify(logs));
+
+  const line = () => { const d=document.createElement('div'); d.className='log-line'; d.innerHTML=`<span class="log-time">${now}</span><span class="log-msg ${type}">[${node}] ${msg}</span>`; return d; };
+  const al = document.getElementById('activity-log');
+  if (al) { al.appendChild(line()); al.scrollTop=al.scrollHeight; while(al.children.length>30) al.removeChild(al.firstChild); }
+  const fl = document.getElementById('full-log');
+  if (fl) { fl.appendChild(line()); fl.scrollTop=fl.scrollHeight; }
+}
+
+function clearLogs() { logs=[]; localStorage.setItem('reels-logs','[]'); document.getElementById('full-log').innerHTML='<div class="log-line"><span class="log-time">00:00:00</span><span class="log-msg">Logs cleared.</span></div>'; }
+function renderFullLog() {
+  const fl = document.getElementById('full-log');
+  fl.innerHTML = logs.length ? logs.map(l=>`<div class="log-line"><span class="log-time">${l.time}</span><span class="log-msg ${l.type}">[${l.node}] ${l.msg}</span></div>`).join('') : '<div class="log-line"><span class="log-time">00:00:00</span><span class="log-msg">No logs yet.</span></div>';
+  fl.scrollTop=fl.scrollHeight;
+}
+
+// ── Credentials ───────────────────────────────────────────
+const CRED_MAP = {
+  'cred-ig-token':'ig_token','cred-ig-user':'ig_user',
+  'cred-fb-page':'fb_page','cred-fb-token':'fb_token',
+  'cred-yt-clientid':'yt_clientid','cred-yt-secret':'yt_secret','cred-yt-refresh':'yt_refresh',
+  'cred-cloud-name':'cloud_name','cred-cloud-preset':'cloud_preset',
+  'cred-cloud-api-key':'cloud_api_key','cred-cloud-secret':'cloud_secret',
+};
+
+async function loadCredentials() {
+  try { const d = await (await fetch('/api/credentials')).json(); for (const [elId,key] of Object.entries(CRED_MAP)) { const el=document.getElementById(elId); if(el&&d[key]) el.value=d[key]; } }
+  catch(e) { toast('Could not load credentials','err'); }
+}
+
+async function saveCredentials() {
+  const body = {};
+  for (const [elId,key] of Object.entries(CRED_MAP)) { const el=document.getElementById(elId); if(el) body[key]=el.value; }
+  try {
+    const d = await (await fetch('/api/credentials',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+    if (d.saved) { toast('✅ Credentials saved to .env!'); addLog('Credentials','All credentials written to .env','ok'); }
+    else toast('Save failed: '+(d.error||'unknown'),'err');
+  } catch(e) { toast('Could not reach server: '+e.message,'err'); }
+}
+
+// ── Modal ─────────────────────────────────────────────────
+function openModal(id) {
+  const p = queue.find(q => q.id === id);
+  if (!p) return;
+  document.getElementById('modal-title').textContent = p.title || 'Post Details';
+  document.getElementById('modal-run-btn').onclick = () => runNow(id);
+  document.getElementById('modal-run-btn').style.display = (p.status === 'Processed' || p.status === 'Processing') ? 'none' : '';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div><div class="section-title" style="margin-bottom:6px">ID</div><div style="font-family:var(--font-mono);font-size:12px;color:var(--accent);">${p.id}</div></div>
+      <div><div class="section-title" style="margin-bottom:6px">Status</div>${statusBadge(p.status)}</div>
+      <div><div class="section-title" style="margin-bottom:6px">Platforms</div><div class="p-icons">${(p.platforms||[]).map(pl=>`<div class="p-icon ${pl==='instagram'?'ig':pl==='facebook'?'fb':'yt'}">${pl==='instagram'?'IG':pl==='facebook'?'FB':'YT'}</div>`).join('')}</div></div>
+      <div><div class="section-title" style="margin-bottom:6px">Scheduled</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);">${p.scheduledAt?new Date(p.scheduledAt).toLocaleString():'Instant'}</div></div>
+    </div>
+    <div style="margin-bottom:14px;"><div class="section-title" style="margin-bottom:6px">Caption</div><div style="font-size:13px;color:var(--text2);line-height:1.6;">${p.caption||'—'}</div></div>
+    <div style="margin-bottom:14px;"><div class="section-title" style="margin-bottom:8px">Platform Results</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div class="track-card"><div class="track-name"><div class="dot ig"></div>Instagram</div><div style="font-family:var(--font-mono);font-size:11px;color:${p.instagramId?'var(--green)':'var(--muted)'};">${p.instagramId||'Not posted yet'}</div></div>
+        <div class="track-card"><div class="track-name"><div class="dot fb"></div>Facebook</div><div style="font-family:var(--font-mono);font-size:11px;color:${p.facebookId?'var(--green)':'var(--muted)'};">${p.facebookId||'Not posted yet'}</div></div>
+        <div class="track-card"><div class="track-name"><div class="dot yt"></div>YouTube</div><div style="font-family:var(--font-mono);font-size:11px;color:${p.youtubeId?'var(--green)':'var(--muted)'};">${p.youtubeId||'Not posted yet'}</div></div>
+      </div>
+    </div>
+    <div><div class="section-title" style="margin-bottom:6px">Video URL</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);word-break:break-all;">${p.videoUrl||'—'}</div></div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(e) { if (!e||e.target===document.getElementById('modal')) document.getElementById('modal').classList.remove('open'); }
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const el=document.createElement('div'); el.className=`toast ${type}`; el.textContent=msg;
+  document.getElementById('toasts').appendChild(el); setTimeout(()=>el.remove(),4000);
+}
+
+// ── Init ──────────────────────────────────────────────────
+loadQueueFromServer();
+addLog('System', 'Reels Scheduler v2 initialized. No Drive/Sheets — pure upload flow.', 'info');
+</script>
+</body>
+</html>
