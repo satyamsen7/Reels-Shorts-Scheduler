@@ -4,7 +4,6 @@
 
 ![Version](https://img.shields.io/badge/version-2.0.0-7c5cfc?style=flat-square)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-green?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
 ---
 
@@ -279,4 +278,4 @@ Pull requests are welcome! For major changes, please open an issue first.
 
 ## 📄 License
 
-MIT © [satyamsen7](https://github.com/satyamsen7)
+© [satyamsen7](https://github.com/satyamsen7)
